@@ -1,0 +1,2 @@
+[console_scripts]
+news-intelligence = news_intelligence.main:main
