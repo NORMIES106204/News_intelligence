@@ -1,201 +1,145 @@
 # AGENTS.md
 
-# News Intelligence — Development Guidelines
+# News Intelligence — Agent Development Guide
 
-## 1. Project Overview
+## 1. Project
 
-News Intelligence is a Python-based personal news intelligence system.
+Repository:
 
-The system will eventually:
+https://github.com/NORMIES106204/News_intelligence
 
-1. Collect news from multiple sources.
-2. Normalize collected data.
-3. Deduplicate articles.
-4. Detect related news/events.
-5. Cluster articles into events.
-6. Evaluate relevance and impact.
-7. Rank important/hot events.
-8. Store historical data.
-9. Send important notifications to the user.
+Project root:
 
+    News_intelligence/
 
-Current collection targets include:
+All commands below must be executed from the PROJECT ROOT unless explicitly
+stated otherwise.
 
-- General/world news
-- Science
-- Scientific publications
-- Space
-- Technology
-- Semiconductors
-- Vietnam/local news
+The project uses:
 
-The system should eventually support approximately dozens of sources and potentially 50–100 feeds.
+- Python 3.12+
+- Python `venv`
+- `pyproject.toml`
+- pytest
+- Ruff
+- mypy
 
 ---
 
-# 2. Core Development Philosophy
-
-Build the project incrementally.
-
-Do NOT implement the entire system at once.
-
-Prefer:
-
-    small component
-        ↓
-    tests
-        ↓
-    verify
-        ↓
-    integrate
-        ↓
-    next component
-
-over:
-
-    large implementation
-        ↓
-    many interconnected problems
-
-Every component must have a clear responsibility.
-
-Avoid premature abstraction.
-
-Do not create classes, modules, or frameworks unless they solve an actual architectural problem.
-
----
-
-# 3. Current Scope
-
- 
-
-# 4. Project Structure
-
-The current project structure is:
+## 2. Project Structure
 
     News_intelligence/
     │
     ├── src/
     │   └── news_intelligence/
-    │       │
     │       ├── domain/
-    │       │   ├── __init__.py
-    │       │   ├── article.py
-    │       │   ├── source.py
-    │       │   └── feed.py
-    │       │
     │       ├── collectors/
-    │       │   ├── __init__.py
-    │       │   ├── base.py
-    │       │   └── rss.py
-    │       │
     │       └── main.py
     │
     ├── tests/
     │   ├── unit/
     │   │   ├── domain/
     │   │   └── collectors/
-    │   │
     │   └── integration/
     │
     ├── config/
     │   └── sources/
-    │       ├── news.yaml
-    │       ├── science.yaml
-    │       ├── publications.yaml
-    │       └── space.yaml
     │
     ├── .venv/
     ├── pyproject.toml
+    ├── .env
+    ├── .env.example
     ├── .gitignore
     ├── AGENTS.md
     └── README.md
 
-Do not reorganize this structure without a strong architectural reason.
-
-If a structural change is necessary, explain the reason before making it.
+Do not change the project structure without a reason.
 
 ---
 
+## 3. Fresh Environment Setup
 
-# 6. Domain vs Infrastructure
+### 3.1 Clone
 
-The most important architectural boundary is:
+Run from the directory where the project should be created:
 
-    domain/
-        What is the data?
+```bash
+git clone https://github.com/NORMIES106204/News_intelligence.git
+cd News_intelligence
 
-    collectors/
-        How do we obtain the data?
+3.2 Create Virtual Environment
+Run from the project root:
+python3 -m venv .venv
+Activate:
+source .venv/bin/activate
+Verify:
+which python
+python --version
+python -m pip --version
 
-Domain objects must NOT know about external infrastructure.
+3.3 Install the Project
+Run from the project root with .venv activated:
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+The project must be installed in editable mode.
+Do not use PYTHONPATH=src as a workaround.
 
-The domain layer must not depend on:
+4. Daily Development
+Before starting work, run from the project root:
+source .venv/bin/activate
+git status
+Check the current branch:
+git branch --show-current
 
-- RSS libraries
-- HTTP clients
-- web scraping libraries
-- PostgreSQL
-- SQLAlchemy
-- filesystem infrastructure
-- notification systems
-- AI libraries
+5. Coding
+Application code belongs under:
+src/news_intelligence/
+Tests belong under:
+tests/
+Never put application code inside tests/.
+Never put tests inside src/.
+Use the src/ layout consistently.
+6. Adding a New Dependency
+When a new Python package is required:
+Step 1 — Add it to pyproject.toml
+Runtime dependency:
+[project]
+dependencies = [
+    "package-name",
+]
+Development-only dependency:
+[project.optional-dependencies]
+dev = [
+    "package-name",
+]
+Do NOT only run:
+pip install package-name
+without updating pyproject.toml.
+Step 2 — Install the updated dependencies
+Run from the project root with .venv activated:
+python -m pip install -e ".[dev]"
+Step 3 — Verify
+Check that the package is installed:
+python -m pip show package-name
+Then run:
+python -m pytest
+Step 4 — Commit
+The dependency change and the code that uses it should normally be committed together.
+Example:
+git add pyproject.toml src/ tests/
+git commit -m "feat(collectors): add RSS parsing dependency"
+Do not commit .venv/.
 
-
-# 7. Domain Model
-
-The initial domain contains three objects:
-
-    Source
-    Feed
-    Article
-
-Their relationship is:
-
-    Source
-      │
-      ├── Feed
-      │     ├── Article
-      │     ├── Article
-      │     └── Article
-      │
-      └── Feed
-            └── Article
-
-
-# 22. Testing Philosophy
-
-Tests should verify behavior, not implementation details.
-
-Avoid tests that depend heavily on private implementation details.
-
-Tests should remain valid if the internal implementation is refactored.
-
----
-
-# 23. Configuration
-
-Source configuration belongs under:
-
-    config/sources/
-
-Examples:
-
-    news.yaml
-    science.yaml
-    publications.yaml
-    space.yaml
-
-Source configuration is DATA.
-
-It should not be hardcoded into collector classes.
-
-
-# 24. Dependencies
-
-
-Every dependency added to the project must have a purpose.
-
-Update `pyproject.toml` when adding dependencies.
-
-Never install project dependencies manually without recording them in the project configuration.
+12. Type Checking
+Run from the project root:
+mypy src/
+Only source code is normally passed to mypy.
+Fix type errors before considering the task complete.
+13. Full Verification
+Before committing a completed task, run from the project root:
+python -m pytest
+ruff check .
+ruff format --check .
+mypy src/
+All checks should pass.
+If one cannot be run because the tool is not configured yet, do not invent a workaround. Report it.
