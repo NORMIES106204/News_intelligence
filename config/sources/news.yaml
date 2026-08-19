@@ -1,0 +1,20 @@
+sources:
+
+  - id: nature
+    name: Nature
+    website: https://www.nature.com
+    country: UK
+    language: en
+    categories:
+      - news
+      - technology
+      - economy
+    enabled: true
+
+    feeds:
+      - id: nature-news
+        name: Nature News
+        url: https://www.nature.com/nature.rss
+        type: rss
+        enabled: true
+

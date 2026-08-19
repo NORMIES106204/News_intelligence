@@ -1,0 +1,18 @@
+sources:
+
+  - id: nasa
+    name: NASA
+    website: https://www.nasa.gov
+    country: US
+    language: en
+    categories:
+      - space
+      - technology
+    enabled: true
+
+    feeds:
+      - id: nasa-space
+        name: NASA Space
+        url: https://www.nasa.gov/feed/
+        type: rss
+        enabled: true
