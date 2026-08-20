@@ -266,3 +266,5 @@ class RSSCollector:
                 f"RSSCollector cannot collect feed type {feed.type!r}; "
                 "only RSS and ATOM are supported."
             )
+
+        
