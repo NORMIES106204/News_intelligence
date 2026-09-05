@@ -23,7 +23,7 @@ class FeedType(StrEnum):
 
     RSS = "rss"
     ATOM = "atom"
-    APIs = "apis"
+    API = "api"
     
 
 

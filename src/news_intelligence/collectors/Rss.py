@@ -30,6 +30,7 @@ import feedparser
 from news_intelligence.domain.article import Article
 from news_intelligence.domain.feed import Feed, FeedType
 from news_intelligence.domain.source import Source
+from news_intelligence.collectors.base import Collector
 
 
 #: Identifies this collector to remote servers. Some publishers reject
@@ -49,7 +50,7 @@ class RSSCollectionError(Exception):
     """
 
 
-class RSSCollector:
+class RSSCollector(Collector):
     """Collect :class:`Article` objects from an RSS or Atom feed.
 
     The collector has no knowledge of storage, scheduling, or processing.
