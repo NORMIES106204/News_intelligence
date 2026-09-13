@@ -1,0 +1,20 @@
+services:
+  news_intelligence:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: news_intelligence
+
+    env_file:
+      - .env
+
+    networks:
+      - backend
+
+    restart: unless-stopped
+
+networks:
+  backend:
+    external: true
+    name: backend
