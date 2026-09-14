@@ -1,4 +1,8 @@
 services:
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9ddadbae26092e91f91553939ac969055dd8912b
   news_intelligence:
     build:
       context: .
@@ -12,9 +16,15 @@ services:
     networks:
       - backend
 
+<<<<<<< HEAD
     restart: unless-stopped
 
 networks:
   backend:
     external: true
     name: backend
+=======
+networks:
+  backend:
+    external: true
+>>>>>>> 9ddadbae26092e91f91553939ac969055dd8912b
