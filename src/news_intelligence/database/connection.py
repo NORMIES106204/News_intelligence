@@ -10,9 +10,4 @@ def get_connection():
         dbname=os.environ["DB_NAME"],
         user=os.environ["DB_USER"],
         password=os.environ["DB_PASSWORD"],
-<<<<<<< HEAD
     )
-
-=======
-    )
->>>>>>> 9ddadbae26092e91f91553939ac969055dd8912b
