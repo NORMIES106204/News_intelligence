@@ -18,6 +18,7 @@ import yaml
 
 from news_intelligence.database.connection import get_connection
 from news_intelligence.collectors.Rss import RSSCollector
+from news_intelligence.domain.article import Article
 from news_intelligence.domain.feed import Feed, FeedType
 from news_intelligence.domain.source import Source
 
@@ -81,10 +82,103 @@ def insert_struct(cursor, table: str, obj) -> None:
     sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
     cursor.execute(sql, tuple(data.values()))
 
+def upsert_source_and_feed(
+    conn,
+    source: Source,
+    feed: Feed,
+) -> None:
+    """Synchronize source/feed metadata from YAML into PostgreSQL."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO sources
+                (id, name, website, country, language, categories, enabled)
+            VALUES
+                (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                website = EXCLUDED.website,
+                country = EXCLUDED.country,
+                language = EXCLUDED.language,
+                categories = EXCLUDED.categories,
+                enabled = EXCLUDED.enabled
+            """,
+            (
+                source.id,
+                source.name,
+                source.website,
+                source.country,
+                source.language,
+                list(source.categories),
+                source.enabled,
+            ),
+        )
+
+        cur.execute(
+            """
+            INSERT INTO feeds
+                (id, source_id, name, url, type, enabled)
+            VALUES
+                (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                source_id = EXCLUDED.source_id,
+                name = EXCLUDED.name,
+                url = EXCLUDED.url,
+                type = EXCLUDED.type,
+                enabled = EXCLUDED.enabled
+            """,
+            (
+                feed.id,
+                feed.source_id,
+                feed.name,
+                feed.url,
+                feed.type.value,
+                feed.enabled,
+            ),
+        )
 
 
-def main() -> None:
+def save_articles(conn, articles: list[Article]) -> int:
+    """Insert new articles and ignore articles already stored by URL."""
+    inserted = 0
+
+    with conn.cursor() as cur:
+        for article in articles:
+            cur.execute(
+                """
+                INSERT INTO articles (
+                    id,
+                    source_id,
+                    feed_id,
+                    title,
+                    description,
+                    url,
+                    published_at,
+                    collected_at,
+                    language
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (url) DO NOTHING
+                """,
+                (
+                    article.id,
+                    article.source_id,
+                    article.feed_id,
+                    article.title,
+                    article.description,
+                    article.url,
+                    article.published_at,
+                    article.collected_at,
+                    article.language,
+                ),
+            )
+            inserted += cur.rowcount
+
+    return inserted
+
+
+
 
 
 if __name__ == "__main__":
-    main()
+    pass

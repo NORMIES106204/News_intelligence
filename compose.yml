@@ -1,30 +1,21 @@
 services:
-<<<<<<< HEAD
-=======
-
->>>>>>> 9ddadbae26092e91f91553939ac969055dd8912b
-  news_intelligence:
+  collector:
     build:
       context: .
       dockerfile: Dockerfile
-
-    container_name: news_intelligence
+    container_name: news-intelligence-collector
+    restart: unless-stopped
 
     env_file:
       - .env
 
+    environment:
+      DB_HOST: ${news}}
+      DB_PORT: ${DB_PORT:-5432}
+
     networks:
       - backend
 
-<<<<<<< HEAD
-    restart: unless-stopped
-
 networks:
   backend:
     external: true
-    name: backend
-=======
-networks:
-  backend:
-    external: true
->>>>>>> 9ddadbae26092e91f91553939ac969055dd8912b
