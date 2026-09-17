@@ -1,149 +1,90 @@
-"""Quick manual test: fetch one feed and print what Article objects come out.
-
-Usage:
-    python main.py                                  # uses the default feed below
-    python main.py https://example.com/rss.xml       # or pass any feed URL
-"""
-
-import os
-import sys
-from pathlib import Path
-from dataclasses import asdict
-from datetime import datetime
-from __future__ import annotations
-
-from dataclasses import asdict, fields
-
-import yaml
+from datetime import datetime, timezone
 
 from news_intelligence.database.connection import get_connection
-from news_intelligence.collectors.Rss import RSSCollector
-from news_intelligence.domain.article import Article
-from news_intelligence.domain.feed import Feed, FeedType
-from news_intelligence.domain.source import Source
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-CONFIG_DIR = PROJECT_ROOT / "config" / "sources"
+TEST_SOURCE_ID = "connection-test-source"
+TEST_FEED_ID = "connection-test-feed"
+TEST_ARTICLE_ID = "connection-test-article"
 
-CONFIG_FILES = (
-    "news.yaml",
-    "space.yaml",
-)
 
-def load_sources_and_feeds(
-    path: Path,
-) -> list[tuple[Source, Feed]]:
-    """Load enabled Source/Feed pairs from one YAML configuration file."""
+def main() -> None:
+    print("Connecting to PostgreSQL...")
 
-    with path.open("r", encoding="utf-8") as handle:
-        data = yaml.safe_load(handle) or {}
+    with get_connection() as conn:
+        print("✓ PostgreSQL connection established")
 
-    pairs: list[tuple[Source, Feed]] = []
+        with conn.cursor() as cur:
+            # Test PostgreSQL itself
+            cur.execute("SELECT 1;")
+            result = cur.fetchone()
 
-    for raw_source in data.get("sources", []):
-        source = Source(
-            id=raw_source["id"],
-            name=raw_source["name"],
-            website=raw_source["website"],
-            country=raw_source.get("country"),
-            language=raw_source.get("language"),
-            categories=tuple(
-                raw_source.get("categories", ())
-            ),
-            enabled=raw_source.get("enabled", True),
-        )
+            if result != (1,):
+                raise RuntimeError(f"Unexpected result: {result}")
 
-        # Ignore disabled sources.
-        if not source.enabled:
-            continue
+            print("✓ SELECT 1 succeeded")
 
-        for raw_feed in raw_source.get("feeds", []):
-            feed = Feed(
-                id=raw_feed["id"],
-                source_id=source.id,
-                name=raw_feed["name"],
-                url=raw_feed["url"],
-                type=FeedType(raw_feed["type"]),
-                enabled=raw_feed.get("enabled", True),
+            # Test writing to sources
+            cur.execute(
+                """
+                INSERT INTO sources (
+                    id,
+                    name,
+                    website,
+                    country,
+                    language,
+                    categories,
+                    enabled
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                    name = EXCLUDED.name
+                """,
+                (
+                    TEST_SOURCE_ID,
+                    "Connection Test Source",
+                    "https://example.com",
+                    "test",
+                    "en",
+                    ["test"],
+                    True,
+                ),
             )
 
-            # Ignore disabled feeds.
-            if feed.enabled:
-                pairs.append((source, feed))
+            print("✓ Source written")
 
-    return pairs
+            # Test writing to feeds
+            cur.execute(
+                """
+                INSERT INTO feeds (
+                    id,
+                    source_id,
+                    name,
+                    url,
+                    type,
+                    enabled
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                    name = EXCLUDED.name
+                """,
+                (
+                    TEST_FEED_ID,
+                    TEST_SOURCE_ID,
+                    "Connection Test Feed",
+                    "https://example.com/test.xml",
+                    "rss",
+                    True,
+                ),
+            )
 
+            print("✓ Feed written")
 
-def insert_struct(cursor, table: str, obj) -> None:
-    data = asdict(obj)
-    columns = ", ".join(data.keys())
-    placeholders = ", ".join(["?"] * len(data))  # sqlite; use %s for Postgres/MySQL
-    sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-    cursor.execute(sql, tuple(data.values()))
+            # Test writing to articles
+            now = datetime.now(timezone.utc)
 
-def upsert_source_and_feed(
-    conn,
-    source: Source,
-    feed: Feed,
-) -> None:
-    """Synchronize source/feed metadata from YAML into PostgreSQL."""
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO sources
-                (id, name, website, country, language, categories, enabled)
-            VALUES
-                (%s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO UPDATE SET
-                name = EXCLUDED.name,
-                website = EXCLUDED.website,
-                country = EXCLUDED.country,
-                language = EXCLUDED.language,
-                categories = EXCLUDED.categories,
-                enabled = EXCLUDED.enabled
-            """,
-            (
-                source.id,
-                source.name,
-                source.website,
-                source.country,
-                source.language,
-                list(source.categories),
-                source.enabled,
-            ),
-        )
-
-        cur.execute(
-            """
-            INSERT INTO feeds
-                (id, source_id, name, url, type, enabled)
-            VALUES
-                (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO UPDATE SET
-                source_id = EXCLUDED.source_id,
-                name = EXCLUDED.name,
-                url = EXCLUDED.url,
-                type = EXCLUDED.type,
-                enabled = EXCLUDED.enabled
-            """,
-            (
-                feed.id,
-                feed.source_id,
-                feed.name,
-                feed.url,
-                feed.type.value,
-                feed.enabled,
-            ),
-        )
-
-
-def save_articles(conn, articles: list[Article]) -> int:
-    """Insert new articles and ignore articles already stored by URL."""
-    inserted = 0
-
-    with conn.cursor() as cur:
-        for article in articles:
             cur.execute(
                 """
                 INSERT INTO articles (
@@ -155,30 +96,61 @@ def save_articles(conn, articles: list[Article]) -> int:
                     url,
                     published_at,
                     collected_at,
-                    language
+                    language,
+                    processed
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (url) DO NOTHING
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                    title = EXCLUDED.title
                 """,
                 (
-                    article.id,
-                    article.source_id,
-                    article.feed_id,
-                    article.title,
-                    article.description,
-                    article.url,
-                    article.published_at,
-                    article.collected_at,
-                    article.language,
+                    TEST_ARTICLE_ID,
+                    TEST_SOURCE_ID,
+                    TEST_FEED_ID,
+                    "Database Connection Test",
+                    "Test article written by the collector container.",
+                    "https://example.com/connection-test",
+                    now,
+                    now,
+                    "en",
+                    False,
                 ),
             )
-            inserted += cur.rowcount
 
-    return inserted
+            print("✓ Article written")
 
+            # Read it back
+            cur.execute(
+                """
+                SELECT
+                    a.id,
+                    a.title,
+                    s.name,
+                    f.name
+                FROM articles a
+                JOIN sources s
+                    ON s.id = a.source_id
+                JOIN feeds f
+                    ON f.id = a.feed_id
+                WHERE a.id = %s;
+                """,
+                (TEST_ARTICLE_ID,),
+            )
 
+            row = cur.fetchone()
 
+            if row is None:
+                raise RuntimeError("Article was not found after INSERT")
+
+            print("✓ Article read back")
+            print(f"  id:     {row[0]}")
+            print(f"  title:  {row[1]}")
+            print(f"  source: {row[2]}")
+            print(f"  feed:   {row[3]}")
+
+    print("✓ DATABASE CONNECTION TEST PASSED")
 
 
 if __name__ == "__main__":
-    pass
+    main()
