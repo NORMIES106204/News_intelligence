@@ -1,78 +1,94 @@
 from psycopg import Connection
 
-from news_intelligence.domain.feed import Feed, FeedType
+from news_intelligence.domain.article import Article
 
 
-class FeedRepository:
-    """Repository for persisting Feed domain objects."""
+class ArticleRepository:
+    """Repository for persisting Article domain objects."""
 
     def __init__(self, connection: Connection):
         self.connection = connection
 
-    def save(self, feed: Feed) -> None:
-        """Insert or update a feed."""
+    def save(self, article: Article) -> None:
+        """Insert an article or update an existing article with the same ID."""
 
         query = """
-            INSERT INTO feeds (
+            INSERT INTO articles (
                 id,
                 source_id,
-                name,
+                feed_id,
+                title,
+                description,
                 url,
-                type,
-                enabled
+                published_at,
+                collected_at,
+                language
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s
             )
             ON CONFLICT (id)
             DO UPDATE SET
                 source_id = EXCLUDED.source_id,
-                name = EXCLUDED.name,
+                feed_id = EXCLUDED.feed_id,
+                title = EXCLUDED.title,
+                description = EXCLUDED.description,
                 url = EXCLUDED.url,
-                type = EXCLUDED.type,
-                enabled = EXCLUDED.enabled
+                published_at = EXCLUDED.published_at,
+                collected_at = EXCLUDED.collected_at,
+                language = EXCLUDED.language
         """
 
         with self.connection.cursor() as cursor:
             cursor.execute(
                 query,
                 (
-                    feed.id,
-                    feed.source_id,
-                    feed.name,
-                    feed.url,
-                    feed.type.value,
-                    feed.enabled,
+                    article.id,
+                    article.source_id,
+                    article.feed_id,
+                    article.title,
+                    article.description,
+                    article.url,
+                    article.published_at,
+                    article.collected_at,
+                    article.language,
                 ),
             )
 
-    def get_by_id(self, feed_id: str) -> Feed | None:
-        """Retrieve a feed by ID."""
+    def get_by_id(self, article_id: str) -> Article | None:
+        """Retrieve an article by ID."""
 
         query = """
             SELECT
                 id,
                 source_id,
-                name,
+                feed_id,
+                title,
+                description,
                 url,
-                type,
-                enabled
-            FROM feeds
+                published_at,
+                collected_at,
+                language
+            FROM articles
             WHERE id = %s
         """
 
         with self.connection.cursor() as cursor:
-            cursor.execute(query, (feed_id,))
+            cursor.execute(query, (article_id,))
             row = cursor.fetchone()
 
         if row is None:
             return None
 
-        return Feed(
+        return Article(
             id=row[0],
             source_id=row[1],
-            name=row[2],
-            url=row[3],
-            type=FeedType(row[4]),
-            enabled=row[5],
+            feed_id=row[2],
+            title=row[3],
+            description=row[4],
+            url=row[5],
+            published_at=row[6],
+            collected_at=row[7],
+            language=row[8],
         )

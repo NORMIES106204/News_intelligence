@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from news_intelligence.collectors.Rss import RSSCollector
-from news_intelligence.config.loader import load_all_sources_and_feeds
+from config.sources_loader import load_all_sources_and_feeds
 from news_intelligence.database.connection import get_connection
 from news_intelligence.database.db_repo.articles import ArticleRepository
 from news_intelligence.database.db_repo.feeds import FeedRepository
