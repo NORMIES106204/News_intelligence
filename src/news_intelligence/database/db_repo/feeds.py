@@ -1,6 +1,6 @@
 from psycopg import Connection
 
-from domain.feed import Feed, FeedType
+from news_intelligence.domain.feed import Feed, FeedType
 
 
 class FeedRepository:

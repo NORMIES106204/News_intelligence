@@ -3,18 +3,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+
     container_name: news-intelligence-collector
+
     restart: unless-stopped
 
     env_file:
       - .env
 
-    environment:
-      DB_HOST: ${news}}
-      DB_PORT: ${DB_PORT:-5432}
-
     networks:
       - backend
+
 
 networks:
   backend:

@@ -1,6 +1,6 @@
 from psycopg import Connection
 
-from domain.source import Source
+from news_intelligence.domain.source import Source
 
 
 class SourceRepository:
