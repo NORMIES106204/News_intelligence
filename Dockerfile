@@ -1,10 +1,10 @@
 FROM python:3.12-slim
 
-WORKDIR /app
+WORKDIR /News_Intelligence
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app:/app/src
 
 COPY requirements.txt .
 
