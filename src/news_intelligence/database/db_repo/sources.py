@@ -44,7 +44,7 @@ class SourceRepository:
                     source.website,
                     source.country,
                     source.language,
-                    source.categories,
+                    list(source.categories),
                     source.enabled,
                 ),
             )
@@ -52,7 +52,7 @@ class SourceRepository:
     def get_by_id(self, source_id: str) -> Source | None:
         """Retrieve a source by ID."""
 
-        query = """
+        query = """ 
             SELECT
                 id,
                 name,
